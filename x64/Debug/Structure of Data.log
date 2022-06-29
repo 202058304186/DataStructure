@@ -1,2 +1,8 @@
-﻿  List.cpp
+﻿  LinkList.cpp
+  List.cpp
+  Ploynomial.cpp
+E:\GitSpace\DataStructure\Structure of Data\Ploynomial.cpp(1,1): warning C4067: 预处理器指令后有意外标记 - 应输入换行符
+  源.cpp
+  正在生成代码...
+E:\GitSpace\DataStructure\Structure of Data\LinkList.cpp(169): warning C4715: “Remove”: 不是所有的控件路径都返回值
   Structure of Data.vcxproj -> E:\GitSpace\DataStructure\Structure of Data\x64\Debug\Structure of Data.exe

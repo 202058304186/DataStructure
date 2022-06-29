@@ -1,7 +1,6 @@
 #include "DataCollection.h"
 #include <iostream>
 using namespace std;
-
 /*
 初始化一个线性表
 无要求，将会返回一个初始化结果。
@@ -42,7 +41,7 @@ bool DeleteSqList(SqList& L) {
 		cout << "线性表未经初始化。";
 		return false;
 	}
-	free(L.data);
+	free((void *)L.data);
 	L.data = NULL;
 	L.length = 0;
 	L.maxSize = 0;
@@ -82,6 +81,8 @@ int SqListLength(SqList L) {
 */
 bool GetElem(SqList L, int pos, element& e) {
 	if (!L.data || pos < 1 || pos > SqListLength(L)) {
+		cout << pos << endl;
+
 		cout << "线性表未经初始化或获取位置非法。";
 		return false;
 	}
@@ -94,14 +95,23 @@ bool GetElem(SqList L, int pos, element& e) {
 * 初始条件：线性表已存在，compare()是数据元素判断函数
 * 操作结果：返回L中第一个与e满足判定函数的数据元素的逻辑位置，若这样的元素不存在，则返回0;
 */
-int LocateElem(SqList L, element e, int Compare(int, int)) {
+int LocateElem(SqList L, element e, bool (*Compare)(element, element)) {
 	if (!L.data) {
 		cout << "线性表未经初始化";
 		return false;
 	}
-	for (int i = 0; i < SqListLength(L); ++i) {
-		if (Compare(e, L.data[i]) == 0) {
-			return i + 1;
+	if (Compare) {
+		for (int i = 0; i < SqListLength(L); ++i) {
+			if (Compare(e, L.data[i])) {
+				return i + 1;
+			}
+		}
+	}
+	else {
+		for (int i = 0; i < SqListLength(L); ++i) {
+			if (e == L.data[i]) {
+				return i + 1;
+			}
 		}
 	}
 	return 0;
@@ -113,7 +123,7 @@ int LocateElem(SqList L, element e, int Compare(int, int)) {
 * 初始条件：线性表存在
 * 操作结果：若cur_e是L的元素，且不是第一个元素，则用pre_e返回，否则操作失败，pre_e未定义。
 */
-bool PriorElem(SqList L, element cur_e, element &pre_e) {
+bool PriorElem(SqList L, element cur_e, element& pre_e) {
 	if (!L.data) {
 		cout << "线性表未经初始化";
 		return false;
@@ -156,8 +166,9 @@ bool SqListInsert(SqList& L, int pos, element data) {
 		cout << "线性表未经初始化或获取位置非法。";
 		return false;
 	}//初始条件
+
 	if (L.length >= L.maxSize) {
-		element* newbase = (element*)realloc(L.data, sizeof(element) 
+		element* newbase = (element*)realloc(L.data, sizeof(element)
 			* ((long long)L.maxSize + LISTINCREMENT));//动态内存再分配
 		if (!newbase) exit(OVERFLOW);//溢出空值
 		L.data = newbase;//移动到新基址
@@ -170,6 +181,88 @@ bool SqListInsert(SqList& L, int pos, element data) {
 	};//移动从第pos个位置开始之后的元素
 	L.length++;
 	*q = data;//为pos位置赋值
-	cout << *q << endl;
 	return true;
+}
+
+/*
+* 删除并保存线性表中某个位置的数据
+* 初始条件：线性表存在，删除位置合法
+* 返回结果：删除结果
+*/
+bool SqListDelete(SqList& L, int pos, element& data) {
+	if (!L.data || pos < 1 || pos > SqListLength(L)) {
+		if(!L.data) {
+			cout << "无法删除：线性表不存在。";
+		}
+		else {
+			cout << "无法删除：删除位置非法。";
+		}
+	}
+	int length = SqListLength(L);
+	
+	element* start = &L.data[pos - 1];
+
+	data = *start;
+	element* end = L.data + length - 1;
+	for (start; start < end; ++start) {
+		*start = *(start + 1);
+	}
+	--L.length;
+	return true;
+}
+
+/*
+* 集合运算
+* 合并两个线性表到第一个线性表
+* 初始条件：线性表都存在
+* 操作结果：在两个线性表之间进行集合∪运算，保存结果到第一个线性表
+*/
+void Union(SqList& first, SqList second, bool (* compare)(element, element)) {
+	int LFirst = first.length, LSecond = second.length;
+	for (int i = 1; i <= LSecond; ++i) {
+		element e;
+		GetElem(second, i, e);
+		if (!LocateElem(first, e, compare)){
+			SqListInsert(first, ++LFirst, e);
+		}
+	}
+}
+
+/*
+* 两个线性表合并
+* 合并两个线性表得到要给新的线性表
+* 初始条件：线性表都存在，compare函数为数据大小相等判断，默认值为NULL时，进行简单等于判断：==
+* 操作结果：直接合并两个线性表，保存结果到一个新的线性表
+*/
+void MergeSqList(SqList a, SqList b, SqList& c,
+	int (*compare)(element, element)) {
+	element* pa = a.data;//第一个表的数据指针
+	element* pb = b.data;//第二个表的数据指针
+	element* pc;//第三个表的数据指针
+	//为C表分配空间
+	c.length = c.maxSize = a.length + b.length;
+	c.data = (element*)malloc(sizeof(element) * c.length);
+	if (!c.data) exit(OVERFLOW);
+	pc = c.data;
+
+	//获取a、b表的表末位置
+	element* pa_last = pa + a.length - 1;
+	element* pb_last = pb + b.length - 1;
+	int curror = 0;//控制移动的游标
+	if (compare) {
+		while (pa <= pa_last && pb <= pb_last) {
+			if (compare(*pa, *pb) < 1) *pc++ = *pa++;
+			else *pc++ = *pb++;
+		}
+		while (pa <= pa_last) *pc++ = *pa++;
+		while (pb <= pb_last) *pc++ = *pb++;
+	}
+	else {
+		while (pa <= pa_last && pb <= pb_last) {
+			if (*pa < *pb) *pc++ = *pa++;
+			else *pc++ = *pb++;
+		}
+		while (pa <= pa_last) *pc++ = *pa++;
+		while (pb <= pb_last) *pc++ = *pb++;
+	}
 }
